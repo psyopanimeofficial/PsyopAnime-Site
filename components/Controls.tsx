@@ -6,15 +6,12 @@ interface ControlsProps {
   onShapeChange: (shape: ShapeType) => void;
   currentColors: string[];
   onColorChange: (index: number, color: string) => void;
-  videoRef: React.RefObject<HTMLVideoElement>;
-  isTracking: boolean;
-  cameraError: string | null;
   handDistance: number;
   onImageUpload: (url: string) => void;
   onAutoColor: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
-  onNavigateWatch: () => void; // New prop for navigation
+  onNavigateWatch: () => void;
 }
 
 const Controls: React.FC<ControlsProps> = ({
@@ -22,9 +19,6 @@ const Controls: React.FC<ControlsProps> = ({
   onShapeChange,
   currentColors,
   onColorChange,
-  videoRef,
-  isTracking,
-  cameraError,
   handDistance,
   onImageUpload,
   onAutoColor,
@@ -55,12 +49,12 @@ const Controls: React.FC<ControlsProps> = ({
     "Midtone",
     "Highlight",
     "Features",
-    "Details/Eyes",
+    "Details", 
     "Background"
   ];
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-6">
+    <div className="absolute inset-0 pointer-events-none z-20 flex flex-col justify-between p-6">
       {/* Header */}
       <div className="flex justify-between items-start pointer-events-auto">
         <div className="flex items-center gap-6">
@@ -113,42 +107,6 @@ const Controls: React.FC<ControlsProps> = ({
               </>
             )}
           </button>
-        </div>
-        
-        {/* Webcam Preview & Status */}
-        <div className="relative group">
-          <div className={`w-32 h-24 rounded-lg overflow-hidden border-2 transition-colors ${
-            cameraError ? 'border-red-600' :
-            isTracking ? 'border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]' : 'border-red-500'
-          }`}>
-            <video 
-              ref={videoRef} 
-              autoPlay 
-              muted 
-              playsInline 
-              className="w-full h-full object-cover transform -scale-x-100"
-            />
-            {cameraError ? (
-               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-center p-2">
-                 <span className="text-red-500 font-bold text-xs mb-1">CAMERA ERROR</span>
-                 <span className="text-[10px] text-gray-300">{cameraError}</span>
-               </div>
-            ) : !isTracking && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-xs text-center p-2">
-                Waiting for hands...
-              </div>
-            )}
-          </div>
-          <div className="mt-2 text-right">
-             <div className="text-xs font-mono text-gray-400">
-               Status: <span className={isTracking ? "text-green-400" : "text-red-400"}>
-                 {cameraError ? "HARDWARE FAIL" : isTracking ? "TRACKING ACTIVE" : "NO SIGNAL"}
-               </span>
-             </div>
-             <div className="text-xs font-mono text-gray-500">
-               Expansion: {(handDistance * 100).toFixed(0)}%
-             </div>
-          </div>
         </div>
       </div>
 
@@ -224,7 +182,7 @@ const Controls: React.FC<ControlsProps> = ({
         
         <div className="mt-4 pt-4 border-t border-white/5 text-center md:text-left">
           <p className="text-xs text-gray-500">
-            INSTRUCTIONS: Show both hands to camera. Move hands apart to Expand. Bring close to Contract.
+             
           </p>
         </div>
       </div>
