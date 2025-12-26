@@ -3,7 +3,6 @@ import Scene from './components/Scene';
 import Controls from './components/Controls';
 import WatchView from './components/WatchView';
 import { ShapeType } from './types';
-import { initializeHandDetection, detectHands } from './services/vision';
 import { extractColorsFromImage } from './utils/geometry';
 
 // Extended list of images for PsyopQueen.EXE using direct i.imgur.com links
@@ -153,10 +152,6 @@ const App: React.FC = () => {
   ]);
   const [expansionFactor, setExpansionFactor] = useState<number>(0.5); // Default 50%
   
-  // Tracking State
-  const [isTracking, setIsTracking] = useState<boolean>(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-
   const [customLogoUrl, setCustomLogoUrl] = useState<string | null>(null);
   
   // Audio State
@@ -164,68 +159,6 @@ const App: React.FC = () => {
   const [wasMutedBeforeWatch, setWasMutedBeforeWatch] = useState<boolean>(false);
   const [hasInteracted, setHasInteracted] = useState<boolean>(false);
   const audioRef = useRef<HTMLAudioElement>(null);
-
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const requestRef = useRef<number | null>(null);
-
-  // Initialize Camera and Vision
-  useEffect(() => {
-    let stream: MediaStream | null = null;
-    let isActive = true;
-    
-    const startCamera = async () => {
-      // Check for HTTPS/Secure Context
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        if (isActive) setCameraError("HTTPS REQUIRED");
-        console.error("Camera API not available. Secure context (HTTPS) required.");
-        return;
-      }
-
-      try {
-        await initializeHandDetection();
-        
-        stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            width: 640, 
-            height: 480,
-            facingMode: "user" 
-          } 
-        });
-        
-        if (isActive && videoRef.current) {
-          videoRef.current.srcObject = stream;
-          // Wait for video to be ready before starting loop
-          videoRef.current.onloadeddata = () => {
-             if(videoRef.current) {
-               videoRef.current.play()
-                .then(() => {
-                  requestRef.current = requestAnimationFrame(loop);
-                })
-                .catch(e => {
-                  console.error("Play failed:", e);
-                  setCameraError("PLAY BLOCKED");
-                });
-             }
-          };
-        }
-      } catch (err) {
-        console.error("Error initializing camera or vision:", err);
-        if (isActive) setCameraError("ACCESS DENIED");
-      }
-    };
-
-    startCamera();
-
-    return () => {
-      isActive = false;
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-      if (requestRef.current) {
-        cancelAnimationFrame(requestRef.current);
-      }
-    };
-  }, []);
 
   // Handle Audio Auto-Play
   useEffect(() => {
@@ -297,24 +230,6 @@ const App: React.FC = () => {
     }
   };
 
-  const loop = (time: number) => {
-    // Check for >= 2 (HAVE_CURRENT_DATA) instead of 4 (HAVE_ENOUGH_DATA) to prevent stalling
-    if (videoRef.current && videoRef.current.readyState >= 2) {
-      const result = detectHands(videoRef.current, videoRef.current.currentTime);
-      
-      if (result) {
-        setIsTracking(result.isTracking);
-        if (result.isTracking) {
-          setExpansionFactor(prev => prev + (result.distance - prev) * 0.1);
-        } else {
-          // Drift back to center if lost
-          setExpansionFactor(prev => prev + (0.5 - prev) * 0.02);
-        }
-      }
-    }
-    requestRef.current = requestAnimationFrame(loop);
-  };
-
   const handleImageUpload = (url: string) => {
     setCustomLogoUrl(url);
     setActiveShape(ShapeType.LOGO);
@@ -356,12 +271,38 @@ const App: React.FC = () => {
         onError={(e) => console.error("Audio playback error:", e)}
       />
 
+      {/* --- CYBERPUNK FRAME OVERLAY --- */}
+      {/* This sits ON TOP of the 3D scene but BEHIND controls */}
+      <div className="absolute inset-0 z-10 pointer-events-none transition-all duration-300 ease-out">
+        
+        {/* Horizontal Scanline Gradient */}
+        <div className="absolute inset-0 opacity-[0.05]" 
+             style={{ 
+               background: `linear-gradient(to bottom, transparent 50%, rgba(255,255,255,0.1) 50%)`,
+               backgroundSize: '100% 4px'
+             }}>
+        </div>
+
+        {/* Frame Borders - Static, No Glow */}
+        <div className="absolute inset-4 border-2 border-white/20 rounded-lg"></div>
+        
+        {/* Corner Accents - Static Red, No Glow */}
+        <div className="absolute top-8 left-8 w-16 h-16 border-t-4 border-l-4 border-red-600/80"></div>
+        <div className="absolute top-8 right-8 w-16 h-16 border-t-4 border-r-4 border-red-600/80"></div>
+        <div className="absolute bottom-8 left-8 w-16 h-16 border-b-4 border-l-4 border-red-600/80"></div>
+        <div className="absolute bottom-8 right-8 w-16 h-16 border-b-4 border-r-4 border-red-600/80"></div>
+             
+        {/* Subtle Vignette */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_50%,rgba(0,0,0,0.6)_100%)]"></div>
+      </div>
+
       {/* 3D Scene Layer */}
       <Scene 
         shape={activeShape} 
         colors={activeColors} 
         expansion={expansionFactor}
         customImageUrl={customLogoUrl}
+        rotationSpeed={0.05} // Fixed rotation speed now
       />
 
       {/* Main Experience Controls */}
@@ -382,9 +323,6 @@ const App: React.FC = () => {
             onShapeChange={handleShapeChange}
             currentColors={activeColors}
             onColorChange={handleColorChange}
-            videoRef={videoRef}
-            isTracking={isTracking}
-            cameraError={cameraError}
             handDistance={expansionFactor}
             onImageUpload={handleImageUpload}
             onAutoColor={handleAutoColor}
