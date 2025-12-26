@@ -10,10 +10,3 @@ export interface ParticleConfig {
   size: number;
   shape: ShapeType;
 }
-
-export interface HandData {
-  leftHand?: { x: number; y: number; z: number; isOpen: boolean };
-  rightHand?: { x: number; y: number; z: number; isOpen: boolean };
-  distance: number; // Normalized 0-1 distance between hands
-  isTracking: boolean;
-}
